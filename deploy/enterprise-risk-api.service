@@ -1,0 +1,16 @@
+[Unit]
+Description=Enterprise Risk API
+After=network.target
+
+[Service]
+User=riskapi
+WorkingDirectory=/opt/enterprise-risk-api
+Environment="AUTH0_ISSUER_URI=https://YOUR_TENANT.us.auth0.com/"
+Environment="AUTH0_AUDIENCE=https://enterprise-risk-api"
+Environment="APP_CORS_ALLOWED_ORIGINS=https://YOUR-SUBDOMAIN.duckdns.org"
+ExecStart=/usr/bin/java -jar /opt/enterprise-risk-api/app.jar
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

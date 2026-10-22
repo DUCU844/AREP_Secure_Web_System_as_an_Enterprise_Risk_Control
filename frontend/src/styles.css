@@ -1,0 +1,66 @@
+:root {
+  font-family: Inter, system-ui, sans-serif;
+  color: #172033;
+  background: #eef2f7;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+.card {
+  width: min(100%, 44rem);
+  padding: 2.5rem;
+  border-radius: 1rem;
+  background: white;
+  box-shadow: 0 1rem 3rem rgb(23 32 51 / 12%);
+}
+
+.eyebrow {
+  color: #5269d9;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+button {
+  border: 0;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  color: white;
+  background: #5269d9;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+button.secondary {
+  color: #172033;
+  background: #e2e7f0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+pre {
+  min-height: 4rem;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  overflow: auto;
+  border-radius: 0.5rem;
+  background: #172033;
+  color: #dce6ff;
+}
+
+.error {
+  border-left: 0.35rem solid #b42318;
+}
