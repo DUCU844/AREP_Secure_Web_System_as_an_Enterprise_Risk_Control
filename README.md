@@ -1,113 +1,122 @@
 # Secure Web System as an Enterprise Risk Control
 
-Implementación del taller AREM: una SPA React autentica usuarios con Auth0 y
-consume una API Spring Boot que valida JWT, issuer, audience y el permiso
-`read:risk`. En producción, Apache sirve la SPA y hace reverse proxy de `/api`
-hacia el backend local; solo se publican los puertos 80 y 443.
+AREM workshop implementation: a React SPA authenticates users with Auth0 and
+consumes a Spring Boot API that validates the JWT issuer, audience, and
+`read:risk` permission. In production, Apache serves the SPA and reverse
+proxies `/api/` to the local backend; only ports 80 and 443 are public.
 
-## Estado de la entrega
+## Delivery status
 
-La aplicación está publicada en:
+The application is published at:
 
 <https://arep-enterprise-risk.duckdns.org>
 
-El backend se ejecuta como el usuario dedicado `riskapi`, enlazado a
-`127.0.0.1:8080`. Apache publica la SPA y redirige únicamente `/api/` hacia el
-backend. El firewall permite SSH, HTTP y HTTPS, y bloquea el puerto 8080.
+The backend runs as the dedicated `riskapi` user and is bound to
+`127.0.0.1:8080`. Apache serves the SPA and proxies only `/api/` to the
+backend. The firewall allows SSH, HTTP, and HTTPS and blocks port 8080.
 
-La infraestructura y la protección de la API están verificadas. El login
-interactivo de Auth0 todavía requiere corregir el recurso API en el tenant:
-Auth0 responde `Service not found: https://arep-enterprise-risk-api` cuando la
-SPA solicita un access token. La aplicación no debe considerarse completamente
-validada hasta que el login termine y `/api/risk-status` devuelva `200` con un
-token válido.
+The infrastructure and API protection have been verified. The Auth0 interactive
+login still requires correcting the API resource in the tenant: Auth0 returns
+`Service not found: https://arep-enterprise-risk-api` when the SPA requests an
+access token. The application must not be considered fully validated until
+login completes and `/api/risk-status` returns `200` with a valid token.
 
-### Evidencias disponibles
+### Available evidence
 
-Las evidencias del laboratorio están en [docs/images](./docs/images/):
+Workshop evidence is stored in [docs/images](./docs/images/):
 
-- [EvidenceDeploy.png](./docs/images/EvidenceDeploy.png): aplicación cliente
-  SPA registrada en Auth0.
-- [EvidenceEndpoint.png](./docs/images/EvidenceEndpoint.png): health check
-  local con respuesta `200`.
-- [EvidenceServer.png](./docs/images/EvidenceServer.png): acceso SSH al
-  servidor Ubuntu con el usuario `ubuntu`.
-- [EvidenceServerConf.png](./docs/images/EvidenceServerConf.png): Java 21 y
-  UFW permitiendo SSH, HTTP y HTTPS.
+- [EvidenceDeploy.png](./docs/images/EvidenceDeploy.png): SPA client
+  registered in Auth0.
+- [EvidenceEndpoint.png](./docs/images/EvidenceEndpoint.png): local health
+  check returning `200`.
+- [EvidenceServer.png](./docs/images/EvidenceServer.png): SSH access to the
+  Ubuntu server with the `ubuntu` user.
+- [EvidenceServerConf.png](./docs/images/EvidenceServerConf.png): Java 21 and
+  UFW allowing SSH, HTTP, and HTTPS.
 - [EvidenceSesionCorrect.png](./docs/images/EvidenceSesionCorrect.png):
-  endpoint protegido sin token con respuesta `401`.
-- [EvidenceTests.png](./docs/images/EvidenceTests.png): `mvn test` exitoso,
-  con tres pruebas sin fallos.
-- [EvidenceHTTPS.png](./docs/images/EvidenceHTTPS.png): aplicación publicada
-  mediante HTTPS.
-- [EvidenceCertificate.png](./docs/images/EvidenceCertificate.png):
-  certificado TLS de Let's Encrypt.
+  protected endpoint returning `401` without a token.
+- [EvidenceTests.png](./docs/images/EvidenceTests.png): successful `mvn test`
+  run with no failures.
+- [EvidenceHTTPS.png](./docs/images/EvidenceHTTPS.png): application served
+  over HTTPS.
+- [EvidenceCertificate.png](./docs/images/EvidenceCertificate.png): Let's
+  Encrypt TLS certificate.
 - [EvidenceCertbotRenew.png](./docs/images/EvidenceCertbotRenew.png):
-  `certbot renew --dry-run` exitoso.
+  successful `certbot renew --dry-run` execution.
 
-La evidencia pendiente es una llamada autenticada exitosa desde la URL HTTPS.
-Debe mostrar `status: "protected"` y el `subject` del usuario. No se deben
-mostrar access tokens, client secrets ni contraseñas.
+The remaining evidence is a successful authenticated call from the HTTPS URL.
+It must show `status: "protected"` and the user's `subject`. Do not show
+access tokens, client secrets, or passwords.
 
-### Verificaciones realizadas
+### Completed checks
 
 ```text
 DNS:
 arep-enterprise-risk.duckdns.org -> 54.147.115.13
 
 Frontend:
-HTTPS responde 200 OK
+HTTPS responds with 200 OK
 
-API sin token:
-HTTPS /api/risk-status responde 401 Unauthorized
+Unauthenticated API:
+HTTPS /api/risk-status responds with 401 Unauthorized
 
 CORS:
-El preflight desde https://arep-enterprise-risk.duckdns.org responde 200
+The preflight from https://arep-enterprise-risk.duckdns.org responds with 200
 
 Backend:
-enterprise-risk-api.service active (running)
-Spring Boot enlazado a 127.0.0.1:8080
+enterprise-risk-api.service is active (running)
+Spring Boot is bound to 127.0.0.1:8080
 
 Certbot:
 Congratulations, all simulated renewals succeeded
 
 Build:
-mvn clean test -> 3 pruebas, 0 fallos
-npm run build -> exitoso
+mvn clean test -> 3 tests, 0 failures
+npm run build -> successful
 ```
 
-La configuración real usa:
+The deployed configuration uses:
 
 ```text
 Auth0 issuer: https://dev-fn3v0pak3325bn1p.us.auth0.com/
 Auth0 audience: https://arep-enterprise-risk-api
-Producción: https://arep-enterprise-risk.duckdns.org
+Production URL: https://arep-enterprise-risk.duckdns.org
 ```
 
-## 1. Conceptos clave
+## 1. Key concepts
 
-- **Autenticación** responde “¿quién eres?”. Auth0 realiza el login y emite un
-  access token.
-- **Autorización** responde “¿qué puedes hacer?”. La API exige el scope
-  `read:risk` además de un JWT válido.
-- **Issuer** identifica al tenant que firmó el token.
-- **Audience** identifica la API para la que fue emitido; evita reutilizar un
-  token contra otro servicio.
-- **HTTPS** cifra credenciales y tokens durante el transporte.
+- **Authentication** answers “who are you?”. Auth0 performs the login and
+  issues an access token.
+- **Authorization** answers “what are you allowed to do?”. The API requires
+  the `read:risk` scope in addition to a valid JWT.
+- **Issuer** identifies the tenant that signed the token.
+- **Audience** identifies the API for which the token was issued and prevents
+  token reuse against another service.
+- **HTTPS** encrypts credentials and tokens in transit.
 
-## 2. Configurar Auth0
+## 2. Auth0 configuration
 
-1. Crea en **Applications → APIs** una API llamada `AREP Enterprise Risk
-    API`, con Identifier exactamente
-    `https://arep-enterprise-risk-api` y algoritmo `RS256`.
-2. En Permissions agrega `read:risk` (“Read the protected risk status”).
-3. Crea una aplicación de tipo **Single Page Application** llamada `AREP
-    Enterprise Risk Lab Frontend`.
-4. En la aplicación, en **APIs > User-Delegated Access**, otorga `read:risk` a
-   la API. **Client Access no reemplaza User-Delegated Access** para el login
-   de una SPA.
-5. Crea un usuario en **Authentication > Database > Users**.
-6. Configura estas URLs exactas en la SPA:
+1. In **Applications → APIs**, create an API named `AREP Enterprise Risk API`
+   with this exact Identifier and the `RS256` signing algorithm:
+
+   ```text
+   https://arep-enterprise-risk-api
+   ```
+
+2. In **Permissions**, add:
+
+   ```text
+   Permission: read:risk
+   Description: Read the protected risk status
+   ```
+
+3. Create an application of type **Single Page Application** named `AREP
+   Enterprise Risk Lab Frontend`.
+4. In the SPA under **APIs → User-Delegated Access**, grant `read:risk` to the
+   API. **Client Access does not replace User-Delegated Access** for a SPA
+   login.
+5. Create a test user under **Authentication → Database → Users**.
+6. Configure these exact SPA URLs:
 
    ```text
    Allowed Callback URLs:
@@ -120,14 +129,14 @@ Producción: https://arep-enterprise-risk.duckdns.org
    https://arep-enterprise-risk.duckdns.org
    ```
 
-No copies un client secret en la SPA: los valores Vite quedan visibles en el
-bundle y solo el client ID es apropiado para este flujo.
+Never copy a client secret into the SPA. Vite values are visible in the
+browser bundle; only the client ID is appropriate for this flow.
 
-## 3. Ejecutar localmente
+## 3. Local execution
 
 ### Backend
 
-Desde `backend/`:
+From `backend/`:
 
 ```powershell
 $env:AUTH0_ISSUER_URI="https://dev-fn3v0pak3325bn1p.us.auth0.com/"
@@ -136,13 +145,13 @@ $env:APP_CORS_ALLOWED_ORIGINS="http://localhost:5173"
 mvn spring-boot:run
 ```
 
-Sin token, esta comprobación debe devolver `401`:
+Without a token, this request must return `401`:
 
 ```powershell
 curl.exe -i http://localhost:8080/api/risk-status
 ```
 
-El endpoint público de salud debe devolver `200`:
+The public health endpoint must return `200`:
 
 ```powershell
 curl.exe -i http://localhost:8080/actuator/health
@@ -150,8 +159,8 @@ curl.exe -i http://localhost:8080/actuator/health
 
 ### Frontend
 
-Desde `frontend/`, crea `.env.local` a partir de `.env.example` y completa el
-tenant y el client ID. Nunca lo subas al repositorio.
+From `frontend/`, create `.env.local` from `.env.example` and fill in the
+tenant and client ID. Never commit this file.
 
 ```powershell
 Copy-Item .env.example .env.local
@@ -159,36 +168,36 @@ npm install
 npm run dev
 ```
 
-Abre `http://localhost:5173`, inicia sesión y pulsa **Llamar API protegida**.
-Una respuesta correcta contiene `status: "protected"` y el `subject` del
-usuario. El navegador nunca muestra ni almacena manualmente el access token.
+Open `http://localhost:5173`, sign in, and select **Call protected API**. A
+successful response contains `status: "protected"` and the user's `subject`.
+The browser never displays or manually stores the access token.
 
-## 4. Despliegue Ubuntu + Duck DNS + Apache
+## 4. Ubuntu, Duck DNS, and Apache deployment
 
-Usa un servidor que controles. Cambia credenciales por defecto, crea un
-usuario de despliegue sin privilegios y permite en el firewall únicamente TCP
-80, 443 y SSH restringido. Nunca publiques el puerto 8080.
+Use a server you control. Change default credentials, create a non-root
+deployment user, and allow only TCP 80, 443, and restricted SSH through the
+firewall. Never expose port 8080.
 
-Instala:
+Install the required packages:
 
 ```bash
 sudo apt update
 sudo apt install -y apache2 certbot python3-certbot-apache openjdk-21-jre
 ```
 
-Construye en una máquina confiable:
+Build on a trusted development machine or CI runner:
 
 ```powershell
 cd backend
 mvn clean package
 cd ../frontend
-# En .env.local, cambia VITE_API_URL a https://arep-enterprise-risk.duckdns.org
+# Set VITE_API_URL to https://arep-enterprise-risk.duckdns.org in .env.local
 npm run build
 ```
 
-Copia `backend/target/*.jar` y `frontend/dist/` mediante `scp` o un método
-seguro. Ejecuta el JAR como usuario dedicado y enlázalo solo a loopback
-mediante un servicio systemd:
+Copy `backend/target/*.jar` and `frontend/dist/` using `scp` or another secure
+transfer method. Run the JAR as a dedicated user and bind it to loopback with
+systemd:
 
 ```ini
 [Unit]
@@ -209,12 +218,12 @@ Restart=always
 WantedBy=multi-user.target
 ```
 
-Apache debe servir `dist/` y hacer proxy únicamente de `/api/` hacia
-`http://127.0.0.1:8080/api/`. Habilita `ssl`, `proxy`, `proxy_http`,
-`rewrite` y `headers`. Las plantillas listas para copiar están en
-`deploy/enterprise-risk-api.service` y `deploy/enterprise-risk.conf`; crea el
-VirtualHost para el hostname Duck DNS y luego
-ejecuta:
+Apache serves `dist/` and proxies only `/api/` to
+`http://127.0.0.1:8080/api/`. Enable `ssl`, `proxy`, `proxy_http`, `rewrite`,
+and `headers`. The ready-to-copy templates are
+`deploy/enterprise-risk-api.service` and `deploy/enterprise-risk.conf`.
+
+Run:
 
 ```bash
 sudo apachectl configtest
@@ -223,14 +232,14 @@ sudo certbot --apache -d arep-enterprise-risk.duckdns.org
 sudo certbot renew --dry-run
 ```
 
-Después de obtener HTTPS, actualiza en Auth0 las tres URLs permitidas y
-reconstruye el frontend con la URL HTTPS. La evidencia de entrega debe
-incluir: llamada autenticada exitosa, certificado válido, `401` sin token,
-`certbot renew --dry-run` exitoso y prueba de que 8080 no es público.
+After obtaining HTTPS, update the three Auth0 allowed URLs and rebuild the
+frontend with the HTTPS API URL. Delivery evidence must include a successful
+authenticated call, a valid certificate, successful `certbot renew --dry-run`,
+a `401` without a token, and proof that port 8080 is not public.
 
-## 5. Diagnóstico pendiente de Auth0
+## 5. Pending Auth0 diagnosis
 
-El bundle desplegado contiene:
+The deployed bundle contains:
 
 ```text
 VITE_AUTH0_DOMAIN=dev-fn3v0pak3325bn1p.us.auth0.com
@@ -238,29 +247,29 @@ VITE_AUTH0_AUDIENCE=https://arep-enterprise-risk-api
 VITE_API_URL=https://arep-enterprise-risk.duckdns.org
 ```
 
-El servicio remoto usa el mismo issuer y audience. La API pública responde
-correctamente `401` sin token, por lo que el backend y Apache están
-conectados. El error ocurre antes de emitir el token, dentro de Auth0:
+The remote service uses the same issuer and audience. The public API correctly
+returns `401` without a token, proving that the backend and Apache are
+connected. The failure occurs before a token is issued, inside Auth0:
 
 ```text
 Service not found: https://arep-enterprise-risk-api
 ```
 
-Para resolverlo, la API debe existir en **Applications → APIs** del mismo
-tenant `dev-fn3v0pak3325bn1p.us.auth0.com` y su **Identifier** debe ser
-exactamente `https://arep-enterprise-risk-api`. Después se debe otorgar
-`read:risk` a la SPA mediante **User-Delegated Access**. Si se usa otro
-Identifier, hay que cambiarlo de forma idéntica en `.env.local`, el bundle de
-producción y `AUTH0_AUDIENCE` del servicio systemd.
+To resolve it, the API must exist under **Applications → APIs** in the same
+tenant, `dev-fn3v0pak3325bn1p.us.auth0.com`, and its Identifier must be exactly
+`https://arep-enterprise-risk-api`. Then grant `read:risk` to the SPA through
+**User-Delegated Access**. If another Identifier is used, update it
+consistently in `.env.local`, the production bundle, and the systemd
+`AUTH0_AUDIENCE` value.
 
-## 6. Evidencia final pendiente
+## 6. Final pending evidence
 
-Después de corregir Auth0:
+After correcting Auth0:
 
-1. Abrir <https://arep-enterprise-risk.duckdns.org>.
-2. Iniciar sesión con el usuario de prueba.
-3. Pulsar **Llamar API protegida**.
-4. Guardar una captura donde se vea la URL HTTPS y una respuesta con:
+1. Open <https://arep-enterprise-risk.duckdns.org>.
+2. Sign in with the test user.
+3. Select **Call protected API**.
+4. Save a screenshot showing the HTTPS URL and a response like:
 
    ```json
    {
@@ -269,15 +278,15 @@ Después de corregir Auth0:
    }
    ```
 
-5. Confirmar que no se muestra ningún token completo.
+5. Confirm that no complete token is visible.
 
-## 7. Riesgos controlados
+## 7. Controlled risks
 
-| Control | Riesgo reducido | Evidencia |
+| Control | Reduced risk | Evidence |
 | --- | --- | --- |
-| Auth0 | Suplantación y credenciales débiles | Flujo de login e identidad |
-| JWT + issuer/audience | Acceso no autorizado y reutilización del token | `401`/`403` y configuración |
-| Scope `read:risk` | Uso de una identidad autenticada sin permiso | Respuesta `403` sin scope |
-| HTTPS | Exposición de credenciales o tokens | Certificado del navegador |
-| Apache reverse proxy | Exposición directa de 8080 | Solo 80/443 públicos |
-| Logs del servicio | Investigación tardía de incidentes | `journalctl -u enterprise-risk-api` |
+| Auth0 | Impersonation and weak credential handling | Auth0 login and user identity |
+| JWT issuer/audience | Unauthorized API access and token reuse | `401`/`403` responses and configuration |
+| `read:risk` scope | Use of an authenticated identity without permission | `403` response without the scope |
+| HTTPS | Credential or token exposure in transit | Browser certificate |
+| Apache reverse proxy | Direct exposure of port 8080 | Only ports 80 and 443 are public |
+| Service logs | Delayed incident investigation | `journalctl -u enterprise-risk-api` |
