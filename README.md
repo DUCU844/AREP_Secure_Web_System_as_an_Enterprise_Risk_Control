@@ -15,38 +15,56 @@ The backend runs as the dedicated `riskapi` user and is bound to
 `127.0.0.1:8080`. Apache serves the SPA and proxies only `/api/` to the
 backend. The firewall allows SSH, HTTP, and HTTPS and blocks port 8080.
 
-The infrastructure and API protection have been verified. The Auth0 interactive
-login still requires correcting the API resource in the tenant: Auth0 returns
-`Service not found: https://arep-enterprise-risk-api` when the SPA requests an
-access token. The application must not be considered fully validated until
-login completes and `/api/risk-status` returns `200` with a valid token.
+The deployment, HTTPS termination, reverse proxy, firewall, backend process,
+and unauthenticated API protection have been verified. Auth0 is configured in
+the project with the issuer, client ID, audience, callback URL, and
+`read:risk` permission described below. The successful authenticated response
+must be verified from the deployed SPA before treating the end-to-end flow as
+complete.
 
-### Available evidence
+### Evidence gallery
 
-Workshop evidence is stored in [docs/images](./docs/images/):
+The following evidence is stored in [docs/images](./docs/images/):
 
-- [EvidenceDeploy.png](./docs/images/EvidenceDeploy.png): SPA client
-  registered in Auth0.
-- [EvidenceEndpoint.png](./docs/images/EvidenceEndpoint.png): local health
-  check returning `200`.
-- [EvidenceServer.png](./docs/images/EvidenceServer.png): SSH access to the
-  Ubuntu server with the `ubuntu` user.
-- [EvidenceServerConf.png](./docs/images/EvidenceServerConf.png): Java 21 and
-  UFW allowing SSH, HTTP, and HTTPS.
-- [EvidenceSesionCorrect.png](./docs/images/EvidenceSesionCorrect.png):
-  protected endpoint returning `401` without a token.
-- [EvidenceTests.png](./docs/images/EvidenceTests.png): successful `mvn test`
-  run with no failures.
-- [EvidenceHTTPS.png](./docs/images/EvidenceHTTPS.png): application served
-  over HTTPS.
-- [EvidenceCertificate.png](./docs/images/EvidenceCertificate.png): Let's
-  Encrypt TLS certificate.
-- [EvidenceCertbotRenew.png](./docs/images/EvidenceCertbotRenew.png):
-  successful `certbot renew --dry-run` execution.
+#### Auth0 SPA registration
 
-The remaining evidence is a successful authenticated call from the HTTPS URL.
-It must show `status: "protected"` and the user's `subject`. Do not show
-access tokens, client secrets, or passwords.
+![Auth0 SPA registration](./docs/images/EvidenceDeploy.png)
+
+#### Local health check
+
+![Local health check](./docs/images/EvidenceEndpoint.png)
+
+#### Ubuntu server access
+
+![Ubuntu server access](./docs/images/EvidenceServer.png)
+
+#### Java and firewall configuration
+
+![Java and firewall configuration](./docs/images/EvidenceServerConf.png)
+
+#### Protected endpoint without a token
+
+![Protected endpoint without a token](./docs/images/EvidenceSesionCorrect.png)
+
+#### Backend tests
+
+![Backend tests](./docs/images/EvidenceTests.png)
+
+#### HTTPS deployment
+
+![HTTPS deployment](./docs/images/EvidenceHTTPS.png)
+
+#### TLS certificate
+
+![TLS certificate](./docs/images/EvidenceCertificate.png)
+
+#### Certificate renewal
+
+![Certificate renewal](./docs/images/EvidenceCertbotRenew.png)
+
+Screenshots must not expose access tokens, client secrets, or passwords. The
+end-to-end authenticated evidence is the response from the deployed SPA showing
+`status: "protected"` and the user's `subject`.
 
 ### Completed checks
 
@@ -237,7 +255,7 @@ frontend with the HTTPS API URL. Delivery evidence must include a successful
 authenticated call, a valid certificate, successful `certbot renew --dry-run`,
 a `401` without a token, and proof that port 8080 is not public.
 
-## 5. Pending Auth0 diagnosis
+## 5. Auth0 configuration reference
 
 The deployed bundle contains:
 
@@ -247,24 +265,22 @@ VITE_AUTH0_AUDIENCE=https://arep-enterprise-risk-api
 VITE_API_URL=https://arep-enterprise-risk.duckdns.org
 ```
 
-The remote service uses the same issuer and audience. The public API correctly
-returns `401` without a token, proving that the backend and Apache are
-connected. The failure occurs before a token is issued, inside Auth0:
+The same values must be present in the Auth0 tenant and in the deployed
+frontend/backend:
 
 ```text
-Service not found: https://arep-enterprise-risk-api
+API Identifier: https://arep-enterprise-risk-api
+Permission: read:risk
+Issuer: https://dev-fn3v0pak3325bn1p.us.auth0.com/
+SPA callback URL: https://arep-enterprise-risk.duckdns.org
 ```
 
-To resolve it, the API must exist under **Applications → APIs** in the same
-tenant, `dev-fn3v0pak3325bn1p.us.auth0.com`, and its Identifier must be exactly
-`https://arep-enterprise-risk-api`. Then grant `read:risk` to the SPA through
-**User-Delegated Access**. If another Identifier is used, update it
-consistently in `.env.local`, the production bundle, and the systemd
-`AUTH0_AUDIENCE` value.
+The SPA must receive `read:risk` through **User-Delegated Access**. The API
+Identifier, issuer, and client ID must belong to the same Auth0 tenant.
 
-## 6. Final pending evidence
+## 6. End-to-end authenticated verification
 
-After correcting Auth0:
+After confirming the Auth0 values above:
 
 1. Open <https://arep-enterprise-risk.duckdns.org>.
 2. Sign in with the test user.
